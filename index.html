@@ -1,171 +1,131 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cool-TV Miniplayer</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            background: #0a0a0a; 
-            color: #fff; 
-            font-family: system-ui, -apple-system, sans-serif; 
-            display: flex; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
-        /* Panou Lateral Stânga */
-        #sidebar { 
-            width: 320px; 
-            background: #121212; 
-            border-right: 2px solid #222; 
-            display: flex; 
-            flex-direction: column; 
-            z-index: 100; 
-        }
-
-        #sidebar h2 { 
-            padding: 20px; 
-            font-size: 1.2rem; 
-            border-bottom: 2px solid #222; 
-            color: #00adb5; 
-            text-align: center; 
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .list { 
-            overflow-y: auto; 
-            flex: 1; 
-            padding: 12px; 
-        }
-
-        /* Butoane optimizate pentru Telecomandă Mi Box */
-        .btn { 
-            display: block; 
-            width: 100%; 
-            padding: 16px 20px; 
-            margin-bottom: 10px; 
-            background: #1a1a1a; 
-            color: #ccc; 
-            border: 2px solid transparent; 
-            border-radius: 8px; 
-            text-align: left; 
-            font-size: 1.1rem; 
-            font-weight: 600;
-            cursor: pointer; 
-            outline: none; 
-            transition: all 0.2s ease;
-        }
-
-        /* Starea de Focus (Stil Telecomandă) */
-        .btn:focus { 
-            background: #00adb5; 
-            color: #fff; 
-            border-color: #ffffff; 
-            transform: scale(1.03); 
-            box-shadow: 0 0 15px rgba(0, 173, 181, 0.6); 
-        }
-
-        .btn.active { 
-            background: #00797f; 
-            color: #fff; 
-        }
-
-        /* Zone Player Dreapta */
-        #player-container { 
-            flex: 1; 
-            background: #000; 
-            position: relative; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-            background: #000;
-        }
-
-        #overlay-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border-radius: 6px;
-            border: 1px solid #333;
-            font-size: 0.9rem;
-            color: #aaa;
-            pointer-events: none;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TV Player</title>
+  <!-- Includem HLS.js pentru a permite redarea stream-urilor .m3u8 în elementul <video> -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    :root { color-scheme: dark; --accent: #14b8a6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; overflow: hidden; background: #050505; color: #fff; font: 20px system-ui, sans-serif; display: grid; grid-template-columns: minmax(260px, 24vw) 1fr; }
+    aside { background: #111827; border-right: 2px solid #263142; display: flex; flex-direction: column; min-width: 0; }
+    h1 { margin: 0; padding: 22px 20px; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); border-bottom: 1px solid #263142; }
+    #channels { overflow-y: auto; padding: 14px; }
+    .channel { display: block; width: 100%; margin: 0 0 10px; padding: 18px; border: 3px solid transparent; border-radius: 10px; background: #1f2937; color: #d1d5db; font: inherit; text-align: left; cursor: pointer; outline: none; }
+    .channel.active { background: #115e59; color: #fff; }
+    .channel:focus { border-color: #fff; background: var(--accent); color: #06201d; transform: scale(1.025); box-shadow: 0 0 20px #14b8a688; }
+    main { position: relative; display: grid; place-items: center; min-width: 0; background: #000; }
+    video, iframe { width: 100%; height: 100%; object-fit: contain; background: #000; border: none; }
+    #empty { max-width: 38rem; padding: 28px; text-align: center; line-height: 1.5; color: #cbd5e1; }
+    #empty strong { display: block; color: #fff; font-size: 1.2em; margin-bottom: 8px; }
+    #info { position: absolute; top: 20px; right: 20px; padding: 10px 14px; border-radius: 8px; background: #000b; color: #d1d5db; pointer-events: none; transition: opacity .4s; z-index: 10; }
+    #info.hidden { opacity: 0; }
+    @media (max-width: 800px) { body { grid-template-columns: 38vw 1fr; } .channel { padding: 14px; font-size: 16px; } }
+  </style>
 </head>
 <body>
+  <aside>
+    <h1>Canale TV</h1>
+    <div id="channels" role="listbox" aria-label="Lista canalelor"></div>
+  </aside>
+  <main>
+    <!-- Elementul video folosit pentru stream-urile directe .m3u8 -->
+    <video id="player" controls autoplay playsinline></video>
+    
+    <!-- Elementul iframe folosit ca alternativă directă pentru site-ul Cool-TV -->
+    <iframe id="iframe-player" allow="autoplay; fullscreen; encrypted-media" style="display: none;"></iframe>
+    
+    <div id="empty"><strong>Se selectează canalul...</strong>Apasă OK pentru a încărca transmisiunea.</div>
+    <div id="info">↑ ↓ selectează · OK/Enter redă · Back oprește</div>
+  </main>
+  <script>
+    // Grila popualtă cu canalele principale de pe cool-tv.net
+    const CHANNELS = [
+      { name: 'Pro TV', slug: 'protv' },
+      { name: 'Antena 1', slug: 'antena1' },
+      { name: 'Kanal D', slug: 'kanald' },
+      { name: 'Digi Sport 1', slug: 'digisport1' },
+      { name: 'Digi Sport 2', slug: 'digisport2' },
+      { name: 'Digi 24', slug: 'digi24' },
+      { name: 'Prima TV', slug: 'prima' },
+      { name: 'HBO', slug: 'hbomax' },
+      { name: 'Cinemax', slug: 'cinemax' },
+      { name: 'Realitatea Plus', slug: 'realitatea' },
+      { name: 'B1 TV', slug: 'b1tv' },
+      { name: 'România TV', slug: 'romaniatv' }
+    ];
 
-    <div id="sidebar">
-        <h2>Canale Cool-TV</h2>
-        <div class="list" id="channel-list">
-            <!-- Canale principale Cool-TV -->
-            <button class="btn" data-slug="protv" onclick="changeChannel('protv', this)">Pro TV</button>
-            <button class="btn" data-slug="antena1" onclick="changeChannel('antena1', this)">Antena 1</button>
-            <button class="btn" data-slug="kanald" onclick="changeChannel('kanald', this)">Kanal D</button>
-            <button class="btn" data-slug="digisport1" onclick="changeChannel('digisport1', this)">Digi Sport 1</button>
-            <button class="btn" data-slug="digisport2" onclick="changeChannel('digisport2', this)">Digi Sport 2</button>
-            <button class="btn" data-slug="digi24" onclick="changeChannel('digi24', this)">Digi 24</button>
-            <button class="btn" onclick="changeChannel('hbomax', this)">HBO</button>
-            <button class="btn" onclick="changeChannel('cinemax', this)">Cinemax</button>
-            <button class="btn" onclick="changeChannel('prima', this)">Prima TV</button>
-            <button class="btn" onclick="changeChannel('realitatea', this)">Realitatea Plus</button>
-        </div>
-    </div>
+    const list = document.querySelector('#channels');
+    const player = document.querySelector('#player');
+    const iframePlayer = document.querySelector('#iframe-player');
+    const empty = document.querySelector('#empty');
+    const info = document.querySelector('#info');
+    let selected = 0, infoTimer, hlsInstance = null;
 
-    <div id="player-container">
-        <div id="overlay-info">Apasă OK pe telecomandă pentru schimbare</div>
-        <iframe id="tv-frame" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-    </div>
+    CHANNELS.forEach((channel, index) => {
+      const button = document.createElement('button');
+      button.className = 'channel'; button.type = 'button'; button.textContent = channel.name;
+      button.setAttribute('role', 'option'); button.dataset.index = index;
+      button.addEventListener('click', () => play(index));
+      button.addEventListener('focus', () => select(index));
+      list.append(button);
+    });
+    const buttons = [...document.querySelectorAll('.channel')];
 
-    <script>
-        // Selectare automată la pornire pentru telecomandă
-        window.addEventListener('DOMContentLoaded', () => {
-            const firstBtn = document.querySelector('.btn');
-            if (firstBtn) {
-                firstBtn.focus();
-                firstBtn.click();
-            }
-        });
+    function select(index) {
+      selected = Math.max(0, Math.min(index, CHANNELS.length - 1));
+      buttons.forEach((button, i) => button.classList.toggle('active', i === selected));
+      buttons[selected]?.scrollIntoView({ block: 'nearest' });
+      showInfo();
+    }
 
-        function changeChannel(slug, element) {
-            // Actualizează starea vizuală a butoanelor
-            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-            if (element) element.classList.add('active');
+    function stopPlayback() {
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+      player.style.display = 'none';
+      
+      iframePlayer.src = 'about:blank';
+      iframePlayer.style.display = 'none';
+      
+      empty.hidden = false;
+    }
 
-            const frame = document.getElementById('tv-frame');
-            
-            // Reîncarcă iframe-ul direct din sursa Cool-TV
-            frame.src = `https://cool-tv.net/ch/${slug}.html`;
-        }
+    function play(index) {
+      select(index);
+      const channel = CHANNELS[index];
+      stopPlayback();
+      empty.hidden = true;
 
-        // Administrare navigare din săgeți pe telecomandă
-        document.addEventListener('keydown', (e) => {
-            const buttons = Array.from(document.querySelectorAll('.btn'));
-            const currentIndex = buttons.indexOf(document.activeElement);
+      // Încărcăm player-ul nativ Cool-TV direct în iframe pentru a ocoli restricțiile CORS
+      iframePlayer.style.display = 'block';
+      iframePlayer.src = `https://cool-tv.net/ch/${channel.slug}.html`;
+      
+      showInfo(channel.name);
+    }
 
-            if (e.key === 'ArrowDown') {
-                if (currentIndex < buttons.length - 1) {
-                    buttons[currentIndex + 1].focus();
-                }
-                e.preventDefault();
-            } else if (e.key === 'ArrowUp') {
-                if (currentIndex > 0) {
-                    buttons[currentIndex - 1].focus();
-                }
-                e.preventDefault();
-            }
-        });
-    </script>
+    function showInfo(text) {
+      if (text) info.textContent = text;
+      info.classList.remove('hidden'); clearTimeout(infoTimer);
+      infoTimer = setTimeout(() => info.classList.add('hidden'), 2800);
+    }
+
+    document.addEventListener('keydown', event => {
+      const key = event.key;
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' ', 'Backspace', 'Escape'].includes(key)) event.preventDefault();
+      if (key === 'ArrowDown') { select(Math.min(selected + 1, CHANNELS.length - 1)); buttons[selected].focus(); }
+      if (key === 'ArrowUp') { select(Math.max(selected - 1, 0)); buttons[selected].focus(); }
+      if (key === 'Enter' || key === ' ') play(selected);
+      if (key === 'Backspace' || key === 'Escape') { stopPlayback(); showInfo('Redare oprită'); }
+    });
+
+    select(0); buttons[0]?.focus();
+  </script>
 </body>
 </html>
