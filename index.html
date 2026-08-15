@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Miniplayer TV Romania</title>
+    <title>Miniplayer Android TV</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * { box-sizing: border-box; }
@@ -33,46 +33,37 @@
             background: #00adb5; 
             color: #fff; 
             border-color: #ffffff;
-            transform: scale(1.03);
-            box-shadow: 0 0 15px rgba(0, 173, 181, 0.5);
+            transform: scale(1.02);
+            box-shadow: 0 0 10px rgba(0,173,181,0.5);
         }
 
         .btn.active { background: #00888e; color: #fff; }
-
         #player-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; }
         video { width: 100%; height: 100%; max-height: 100vh; }
         
         #loader { 
-            position: absolute; 
-            color: #fff; 
-            font-size: 1.2rem; 
-            display: none; 
-            background: rgba(0,0,0,0.85); 
-            padding: 20px 30px; 
-            border-radius: 10px; 
-            border: 1px solid #00adb5;
-            z-index: 20; 
+            position: absolute; color: #fff; font-size: 1.2rem; display: none; 
+            background: rgba(0,0,0,0.85); padding: 20px 30px; border-radius: 10px; border: 1px solid #00adb5; z-index: 20; 
         }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h2>Canale TV Directe</h2>
-        <div class="list" id="channelList">
-            <button class="btn" onclick="playStream('https://dtolive.protv.ro/live/smil:protv.smil/playlist.m3u8', this)">Pro TV</button>
+        <h2>Canale TV RO</h2>
+        <div class="list">
             <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/digi24.m3u8', this)">Digi 24</button>
             <button class="btn" onclick="playStream('https://strm.mywebtv.info/live/tvr1/playlist.m3u8', this)">TVR 1</button>
             <button class="btn" onclick="playStream('https://strm.mywebtv.info/live/tvr2/playlist.m3u8', this)">TVR 2</button>
             <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/realitatea.m3u8', this)">Realitatea Plus</button>
             <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/b1tv.m3u8', this)">B1 TV</button>
-            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/romaniatv.m3u8', this)">Romania TV</button>
+            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/romaniatv.m3u8', this)">România TV</button>
             <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/euronews.m3u8', this)">Euronews RO</button>
         </div>
     </div>
 
     <div id="player-container">
-        <div id="loader">Se încarcă canalul...</div>
+        <div id="loader">Se conectează la canal...</div>
         <video id="video" controls autoplay></video>
     </div>
 
@@ -96,18 +87,21 @@
             if (hlsPlayer) hlsPlayer.destroy();
 
             if (Hls.isSupported()) {
-                hlsPlayer = new Hls();
+                hlsPlayer = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true
+                });
                 hlsPlayer.loadSource(url);
                 hlsPlayer.attachMedia(video);
                 
                 hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
                     loader.style.display = 'none';
-                    video.play();
+                    video.play().catch(() => {});
                 });
 
                 hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
                     if (data.fatal) {
-                        loader.innerText = 'Canal indisponibil temporar.';
+                        loader.innerText = 'Canal indisponibil sau blocat.';
                         loader.style.display = 'block';
                     }
                 });
