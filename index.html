@@ -4,114 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Miniplayer Android TV</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
         #sidebar { width: 280px; background: #121212; border-right: 2px solid #222; display: flex; flex-direction: column; z-index: 10; }
-        #sidebar h2 { padding: 20px; margin: 0; font-size: 1.3rem; border-bottom: 2px solid #222; color: #00adb5; text-align: center; }
+        #sidebar h2 { 
+            padding: 20px; margin: 0; font-size: 1.3rem; border-bottom: 2px solid #222; 
+            color: #ff0000; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
         .list { overflow-y: auto; flex: 1; padding: 10px; }
         
         .btn { 
-            display: block; 
-            width: 100%; 
-            padding: 15px 20px; 
-            margin-bottom: 8px; 
-            background: #1a1a1a; 
-            color: #aaa; 
-            border: 2px solid transparent; 
-            border-radius: 8px;
-            text-align: left; 
-            font-size: 1.1rem;
-            cursor: pointer; 
-            outline: none;
-            transition: all 0.15s ease-in-out;
+            display: block; width: 100%; padding: 15px 20px; margin-bottom: 8px; 
+            background: #1a1a1a; color: #aaa; border: 2px solid transparent; 
+            border-radius: 8px; text-align: left; font-size: 1.1rem; 
+            cursor: pointer; outline: none; transition: all 0.15s ease-in-out;
         }
 
+        /* Optimizat pentru telecomanda de pe Mi Box */
         .btn:focus, .btn:hover { 
-            background: #00adb5; 
-            color: #fff; 
-            border-color: #ffffff;
-            transform: scale(1.02);
-            box-shadow: 0 0 10px rgba(0,173,181,0.5);
+            background: #ff0000; color: #fff; border-color: #ffffff; 
+            transform: scale(1.03); box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
         }
 
-        .btn.active { background: #00888e; color: #fff; }
-        #player-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; }
-        video { width: 100%; height: 100%; max-height: 100vh; }
+        .btn.active { background: #cc0000; color: #fff; }
         
-        #loader { 
-            position: absolute; color: #fff; font-size: 1.2rem; display: none; 
-            background: rgba(0,0,0,0.85); padding: 20px 30px; border-radius: 10px; border: 1px solid #00adb5; z-index: 20; 
-        }
+        #player-container { flex: 1; display: flex; background: #000; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h2>Canale TV RO</h2>
+        <h2>🔴 TV Live (YouTube)</h2>
         <div class="list">
-            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/digi24.m3u8', this)">Digi 24</button>
-            <button class="btn" onclick="playStream('https://strm.mywebtv.info/live/tvr1/playlist.m3u8', this)">TVR 1</button>
-            <button class="btn" onclick="playStream('https://strm.mywebtv.info/live/tvr2/playlist.m3u8', this)">TVR 2</button>
-            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/realitatea.m3u8', this)">Realitatea Plus</button>
-            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/b1tv.m3u8', this)">B1 TV</button>
-            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/romaniatv.m3u8', this)">România TV</button>
-            <button class="btn" onclick="playStream('https://m3u.pro/streams/ro/euronews.m3u8', this)">Euronews RO</button>
+            <!-- Funcția folosește ID-ul canalului (începe cu UC) pentru a extrage mereu ultimul stream live automat -->
+            <button class="btn" onclick="playStream('UCRFBBkIfN-1k-iCstB6n8mQ', this)">Digi 24</button>
+            <button class="btn" onclick="playStream('UCiVjM84mE4Z8s3W8W_V0zRQ', this)">România TV</button>
+            <button class="btn" onclick="playStream('UC1X1w8B_H1Xf2Y5x_T0W8yA', this)">Antena 3 CNN</button>
+            <button class="btn" onclick="playStream('UC3bXz2_7YqD_D1a1D2H9vXg', this)">B1 TV</button>
+            <button class="btn" onclick="playStream('UCGf4z7QpXp_tZ0v41D_eWwA', this)">Realitatea Plus</button>
+            <button class="btn" onclick="playStream('UC7P4w_dE4X2m4e9v6W5Z9aA', this)">Euronews RO</button>
+            
+            <h2 style="font-size: 1rem; color: #aaa; margin-top: 20px; border: none;">Muzică & Relaxare</h2>
+            <button class="btn" onclick="playStream('UCL4A2r_c45aZzQe7a-cWw_g', this)">Kiss FM Live</button>
+            <button class="btn" onclick="playStream('UCG8rbF3g2AMX70yOd8vqIZg', this)">Magic FM Live</button>
         </div>
     </div>
 
     <div id="player-container">
-        <div id="loader">Se conectează la canal...</div>
-        <video id="video" controls autoplay></video>
+        <!-- Iframe-ul folosește player-ul nativ YouTube, 100% rezistent la erori CORS -->
+        <iframe id="video-frame" allow="autoplay; fullscreen; encrypted-media" src=""></iframe>
     </div>
 
     <script>
-        let hlsPlayer = null;
-
         window.onload = () => {
             const firstBtn = document.querySelector('.btn');
-            if (firstBtn) firstBtn.focus();
+            if (firstBtn) {
+                firstBtn.focus();
+                // Pornește automat primul canal când deschizi aplicația pe TV
+                firstBtn.click();
+            }
         };
 
-        function playStream(url, btnElement) {
+        function playStream(id, btnElement) {
             document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
-            const loader = document.getElementById('loader');
-            loader.innerText = 'Se conectează la stream...';
-            loader.style.display = 'block';
+            const iframe = document.getElementById('video-frame');
+            let url = '';
 
-            const video = document.getElementById('video');
-            if (hlsPlayer) hlsPlayer.destroy();
-
-            if (Hls.isSupported()) {
-                hlsPlayer = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true
-                });
-                hlsPlayer.loadSource(url);
-                hlsPlayer.attachMedia(video);
-                
-                hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-                    loader.style.display = 'none';
-                    video.play().catch(() => {});
-                });
-
-                hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        loader.innerText = 'Canal indisponibil sau blocat.';
-                        loader.style.display = 'block';
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url;
-                video.addEventListener('loadedmetadata', () => {
-                    loader.style.display = 'none';
-                    video.play();
-                });
+            // Dacă ID-ul începe cu "UC", este un ID de canal și căutăm live-ul automat
+            // Altfel, dacă folosești un ID scurt de videoclip, îl încarcă direct
+            if (id.startsWith('UC')) {
+                url = `https://www.youtube.com/embed/live_stream?channel=${id}&autoplay=1&rel=0&modestbranding=1`;
+            } else {
+                url = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
             }
+
+            iframe.src = url;
         }
     </script>
 </body>
